@@ -1,0 +1,176 @@
+name: 🚀 Deploy to GitHub Pages
+
+on:
+  # 由于还没有 CI Gate 工作流，先改为 push 触发
+  push:
+    branches: [main]
+  
+  # 暂时注释掉 workflow_run，等 CI Gate 工作流创建后再启用
+  # workflow_run:
+  #   workflows: ["🔒 CI Gate"]
+  #   types: [completed]
+  #   branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: 🛠️ Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🔍 Check project structure
+        run: |
+          echo "=== 项目结构 ==="
+          pwd
+          ls -la
+          echo ""
+          echo "=== package.json 内容（如果有）==="
+          cat package.json 2>/dev/null || echo "没有 package.json 文件"
+          echo ""
+          echo "=== 查找 HTML 文件 ==="
+          find . -name "*.html" 2>/dev/null | head -10
+      
+      - name: 📝 Create simple index page
+        run: |
+          echo "=== 创建部署页面 ==="
+          mkdir -p dist
+          cat > dist/index.html << EOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FeaturePanel UI Training</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #764ba2;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+        .status {
+            background: #f0f9ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 0 8px 8px 0;
+        }
+        .success { color: #10b981; }
+        .warning { color: #f59e0b; }
+        .info { color: #3b82f6; }
+        .next-steps {
+            margin-top: 30px;
+            text-align: left;
+        }
+        .next-steps li {
+            margin: 10px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .next-steps li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+        }
+        .actions {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🚀</div>
+        <h1>FeaturePanel UI Training</h1>
+        
+        <div class="status">
+            <p><span class="success">✅</span> GitHub Pages 部署成功！</p>
+            <p><span class="info">ℹ️</span> 这是自动生成的演示页面</p>
+            <p><span class="warning">⚠️</span> 请检查项目结构并添加实际内容</p>
+        </div>
+        
+        <p>恭喜！您的 GitHub Pages 已成功部署。接下来需要：</p>
+        
+        <ul class="next-steps">
+            <li>检查项目结构是否正确</li>
+            <li>添加实际的前端代码（HTML、CSS、JavaScript）</li>
+            <li>配置合适的构建工具（如 webpack、Vite）</li>
+            <li>创建 CI Gate 工作流进行自动化测试</li>
+            <li>将构建输出部署到 GitHub Pages</li>
+        </ul>
+        
+        <div class="actions">
+            <a href="https://github.com/A-Sheng18/ui-feature-panel-training" class="btn btn-primary" target="_blank">查看仓库</a>
+            <a href="https://pages.github.com/" class="btn btn-secondary" target="_blank">GitHub Pages 文档</a>
+        </div>
+    </div>
+</body>
+</html>
+EOF
+          echo "✅ 已创建 dist/index.html"
+      
+      - name: 🚀 Upload artifact and deploy
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+        
+      - name: 🚀 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
