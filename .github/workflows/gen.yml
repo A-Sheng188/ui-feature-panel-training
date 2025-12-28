@@ -1,0 +1,22 @@
+name: Generate Dist
+on:
+  workflow_dispatch
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm init -y
+      - name: Generate dist
+        run: echo "Generate dist placeholder"
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add dist/ || true
+          git diff --staged --quiet || git commit -m "chore: regenerate dist"
+          git push || echo "No changes to push"
