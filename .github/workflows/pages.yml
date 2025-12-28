@@ -27,11 +27,106 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
-        
+          # 添加这行来指定制品名称（如果CI Gate上传了特定名称的制品）
+          # name: build
+      
+      - name: 🔍 彻底检查下载的文件结构
+        id: inspect
+        run: |
+          echo "======================================"
+          echo "📁 完整的当前目录结构"
+          echo "======================================"
+          pwd
+          ls -la
+          
+          echo ""
+          echo "======================================"
+          echo "🔍 递归查找所有文件和目录"
+          echo "======================================"
+          find . -type f 2>/dev/null | head -50
+          
+          echo ""
+          echo "======================================"
+          echo "📊 统计文件类型"
+          echo "======================================"
+          echo "HTML文件:"
+          find . -name "*.html" 2>/dev/null
+          echo ""
+          echo "JavaScript文件:"
+          find . -name "*.js" 2>/dev/null | head -10
+          echo ""
+          echo "CSS文件:"
+          find . -name "*.css" 2>/dev/null | head -10
+          
+          echo ""
+          echo "======================================"
+          echo "📂 检查所有子目录的内容"
+          echo "======================================"
+          for dir in $(find . -type d -maxdepth 2 2>/dev/null); do
+            echo "目录: $dir"
+            ls -la "$dir/" 2>/dev/null | head -5
+            echo "---"
+          done
+      
+      - name: 📦 确定正确的上传路径
+        id: find-path
+        run: |
+          # 查找包含index.html的目录
+          HTML_DIRS=$(find . -name "index.html" -type f 2>/dev/null | xargs dirname 2>/dev/null | head -5)
+          
+          echo "找到包含index.html的目录:"
+          for dir in $HTML_DIRS; do
+            echo "- $dir"
+          done
+          
+          if [ -z "$HTML_DIRS" ]; then
+            echo "❌ 没有找到index.html文件"
+            echo "DEPLOY_PATH=./" >> $GITHUB_ENV
+            echo "WARNING=no-html-found" >> $GITHUB_ENV
+          else
+            # 取第一个找到的目录
+            FIRST_DIR=$(echo "$HTML_DIRS" | head -1)
+            echo "✅ 选择部署目录: $FIRST_DIR"
+            echo "DEPLOY_PATH=$FIRST_DIR" >> $GITHUB_ENV
+            echo "WARNING=none" >> $GITHUB_ENV
+            
+            # 创建测试文件（如果需要）
+            if [ ! -f "$FIRST_DIR/index.html" ]; then
+              echo "创建测试index.html文件"
+              cat > "$FIRST_DIR/index.html" << EOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Pages</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
+        h1 { color: #0366d6; }
+        .success { color: green; }
+        .info { background: #f6f8fa; padding: 20px; border-radius: 5px; margin: 20px auto; max-width: 600px; }
+    </style>
+</head>
+<body>
+    <h1>🚀 GitHub Pages 部署成功！</h1>
+    <div class="info">
+        <p class="success">✅ 部署工作流正在运行</p>
+        <p>这是自动生成的测试页面。</p>
+        <p>请检查您的 CI Gate 工作流是否生成了正确的构建文件。</p>
+    </div>
+</body>
+</html>
+EOF
+            fi
+          fi
+          
+          echo "使用的部署路径: $DEPLOY_PATH"
+      
       - name: 🚀 Upload artifact and deploy
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          # 使用动态确定的路径
+          path: ${{ env.DEPLOY_PATH }}
         
       - name: 🚀 Deploy to GitHub Pages
         id: deployment
