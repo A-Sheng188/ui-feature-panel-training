@@ -1,0 +1,24 @@
+name: 🚀 Deploy to GitHub Pages
+on:
+  workflow_run:
+    workflows: ["🔒 CI Gate"]
+    types: [completed]
+    branches: [main]
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions: { contents: read, pages: write, id-token: write }
+    environment: { name: github-pages, url: ${{ steps.deployment.outputs.page_url }} }
+    steps:
+      - name: 🛠️ Setup Pages
+        uses: actions/configure-pages@v4
+      - name: 📥 Download artifact from successful CI run
+        uses: actions/download-artifact@v4
+        with: { github-token: ${{ secrets.GITHUB_TOKEN }}, run-id: ${{ github.event.workflow_run.id }} }
+      - name: 🚀 Upload artifact and deploy
+        uses: actions/upload-pages-artifact@v3
+        with: { path: './dist' }
+      - name: 🚀 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
