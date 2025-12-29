@@ -1,26 +1,45 @@
 name: Deploy to GitHub Pages
+
 on:
   workflow_run:
     workflows: [CI]
     branches: [main]
     types:
       - completed
+
+# 设置权限，解决 id_token 错误
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 并发控制
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
     steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           run-id: ${{ github.event.workflow_run.id }}
-      - name: Upload pages artifact
+          name: dist
+          
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
+          
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
