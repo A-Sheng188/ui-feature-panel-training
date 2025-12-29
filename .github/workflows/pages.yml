@@ -2,38 +2,49 @@ name: Deploy to GitHub Pages
 
 on:
   workflow_run:
-    workflows: [CI]
-    branches: [main]
-    types:
-      - completed
+    workflows: [CI]           # 监听CI工作流
+    branches: [main]          # 仅main分支
+    types: [completed]        # 当CI完成时
 
 permissions:
   contents: read
   pages: write
-  id-token: write
+  id-token: write             # 必要的权限
 
 jobs:
   deploy:
+    # 仅在CI成功时运行
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+      
     steps:
+      # 1. 设置Pages环境
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v3
         
+      # 2. 下载名为'dist'的Artifact（必须与ci.yml中的name匹配）
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           run-id: ${{ github.event.workflow_run.id }}
-          name: dist
+          name: dist           # 关键：必须与上传的Artifact名称一致
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      # 3. 检查下载的文件
+      - name: List downloaded files
+        run: ls -la
+          
+      # 4. 上传到Pages
+      - name: Upload to Pages
+        uses: actions/upload-pages-artifact@v2
         with:
-          path: '.'
-          
+          path: '.'            # 上传当前目录（包含下载的dist内容）
+            
+      # 5. 部署到GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v2
