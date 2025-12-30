@@ -26,6 +26,7 @@ jobs:
         run: node tests/feature-panel.spec.js
 
       # 3. 生成或确保 dist 目录存在（核心任务）
+      # 注意：下面从 `run: |` 开始的所有行，都比 `run: |` 多缩进了2个空格。
       - name: Build Dist Directory
         run: |
           # 如果生成脚本存在，则运行它
