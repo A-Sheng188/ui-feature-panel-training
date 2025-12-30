@@ -1,0 +1,33 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 假设你的项目需要构建（例如使用 npm run build）
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # 根据你的项目实际情况调整构建命令
+      - name: Build Project
+        run: |
+          npm install
+          npm run build # 此命令应在你的package.json中定义，用于生成dist文件夹
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v3 # 这是一个专门处理此场景的成熟Action
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist # 明确指定发布 dist 文件夹的内容
