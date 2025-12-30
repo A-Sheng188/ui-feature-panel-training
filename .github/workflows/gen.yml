@@ -1,22 +1,38 @@
-name: Generate Dist
+name: ⚙️ Gen - 生成与推进
+
 on:
-  workflow_dispatch
+  workflow_dispatch: # 手动触发
+
+permissions:
+  contents: write # 允许工作流推送代码
+
 jobs:
-  generate:
+  generate-and-push:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: 🗂️ 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ⎔ 设置 Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install dependencies
-        run: npm init -y
-      - name: Generate dist
-        run: echo "Generate dist placeholder"
-      - name: Commit and push if changed
+
+      - name: 🛠️ 运行生成脚本 (唯一来源)
+        run: node tools/gen_dist.js
+
+      - name: 📝 检查是否有变更并提交
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add dist/ || true
-          git diff --staged --quiet || git commit -m "chore: regenerate dist"
-          git push || echo "No changes to push"
+          git add dist/
+          if git diff --staged --quiet; then
+            echo "没有检测到 dist 目录的变更，无需提交。"
+          else
+            git commit -m "chore(dist): 由 gen.yml 自动生成，更新 FeaturePanel 完整实现"
+            git push
+            echo "已提交并推送生成的 dist 目录。"
+          fi
