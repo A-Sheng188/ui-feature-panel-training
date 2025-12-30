@@ -1,50 +1,45 @@
 name: Deploy to GitHub Pages
 
 on:
-  workflow_run:
-    workflows: [CI]           # 监听CI工作流
-    branches: [main]          # 仅main分支
-    types: [completed]        # 当CI完成时
+  # 触发方式：1. 推送到main分支的dist目录；2. 手动触发；3. 可选的：当CI成功时（如果希望保持联动）
+  push:
+    branches: [ main ]
+    paths:
+      - 'dist/**'
+  workflow_dispatch: # 允许手动运行
 
 permissions:
   contents: read
   pages: write
-  id-token: write             # 必要的权限
+  id-token: write
 
 jobs:
   deploy:
-    # 仅在CI成功时运行
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-      
     steps:
-      # 1. 设置Pages环境
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Validate Dist Directory
+        run: |
+          if [ ! -d "dist" ] || [ ! -f "dist/index.html" ]; then
+            echo "❌ Error: 'dist' directory or 'index.html' not found."
+            echo "💡 Solution: Run the 'Generate Dist' workflow first."
+            exit 1
+          fi
+          echo "✅ Dist directory is valid."
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
-        
-      # 2. 下载名为'dist'的Artifact（必须与ci.yml中的name匹配）
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dist           # 关键：必须与上传的Artifact名称一致
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          
-      # 3. 检查下载的文件
-      - name: List downloaded files
-        run: ls -la
-          
-      # 4. 上传到Pages
+
       - name: Upload to Pages
         uses: actions/upload-pages-artifact@v2
         with:
-          path: '.'            # 上传当前目录（包含下载的dist内容）
-            
-      # 5. 部署到GitHub Pages
+          path: 'dist' # 直接使用仓库中的dist目录
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
