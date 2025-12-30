@@ -1,34 +1,33 @@
-name: Deploy to GitHub Pages
+name: Deploy Static Site to Pages
 
 on:
   push:
     branches: [ main ]
 
 permissions:
-  contents: write  # 这行是关键，必须放在文件顶部
+  contents: write  # 授予写入权限，这是部署的关键
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      # 核心：安装依赖
-      - name: Install Dependencies
-        run: npm install  # 这会读取你的package.json
-
-      # 核心：运行构建命令，必须确保能生成dist文件夹
-      - name: Build Project
-        run: npm run build
+      - name: Validate dist directory
+        run: |
+          echo "Checking if 'dist' directory exists..."
+          if [ -d "dist" ]; then
+            echo "✅ Found 'dist' directory. Contents:"
+            ls -la dist/
+          else
+            echo "❌ Error: 'dist' directory not found in the repository root."
+            echo "Please ensure your site files are in a folder named 'dist'."
+            exit 1 # 这是一个关键检查，如果dist不存在则主动让工作流失败
+          fi
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist  # 发布上一步生成的dist文件夹
+          publish_dir: ./dist  # 直接发布这个已存在的文件夹
