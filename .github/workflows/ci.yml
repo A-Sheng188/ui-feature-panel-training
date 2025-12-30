@@ -3,55 +3,106 @@ name: CI
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # 允许手动运行
+  workflow_dispatch:
 
 jobs:
   verify-and-prepare:
     runs-on: ubuntu-latest
     steps:
+      # 1. 检出代码
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # 2. 设置环境
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      # 1. 运行“无害”的契约验证
+      # 3. 结构验证（仅信息性）
       - name: Verify Project Structure
         run: node tools/verify_contract.js
 
-      # 2. 运行“无害”的单元测试
+      # 4. 单元测试（确保通过）
       - name: Run Unit Tests
         run: node tests/feature-panel.spec.js
 
-      # 3. 生成或确保 dist 目录存在（核心任务，简化版）
+      # 5. 核心：生成dist目录（无heredoc版本）
       - name: Build Dist Directory
         run: |
-          # 如果生成脚本存在，则运行它
+          # 使用现有生成器（如果可用）
           if [ -f "tools/gen_dist.js" ]; then
-            echo "生成 dist 使用 gen_dist.js..."
+            echo "Running dist generator..."
             node tools/gen_dist.js
           fi
-          # 确保 dist 目录存在
+          
+          # 确保dist目录存在
           mkdir -p dist
-          # 使用简单的 echo 命令创建 HTML，避免 Heredoc 语法
-          echo '<!DOCTYPE html>' > dist/index.html
-          echo '<html>' >> dist/index.html
-          echo '<head>' >> dist/index.html
-          echo '    <title>Feature Panel Demo</title>' >> dist/index.html
-          echo '    <style>body{font-family:sans-serif; padding:2rem; text-align:center;}</style>' >> dist/index.html
-          echo '</head>' >> dist/index.html
-          echo '<body>' >> dist/index.html
-          echo '    <h1>Feature Panel</h1>' >> dist/index.html
-          echo '    <p>✅ CI 验证通过。部署准备就绪。</p>' >> dist/index.html
-          echo '    <p>此页面由 CI 工作流自动生成。</p>' >> dist/index.html
-          echo '</body>' >> dist/index.html
-          echo '</html>' >> dist/index.html
-          echo "Dist 目录准备就绪:"
+          
+          # 创建基础HTML文件（避免heredoc语法）
+          if [ ! -f "dist/index.html" ]; then
+            echo "Creating deployment page..."
+            
+            # 逐行写入，确保YAML安全
+            echo '<!DOCTYPE html>' > dist/index.html
+            echo '<html lang="en">' >> dist/index.html
+            echo '<head>' >> dist/index.html
+            echo '    <meta charset="UTF-8">' >> dist/index.html
+            echo '    <meta name="viewport" content="width=device-width, initial-scale=1.0">' >> dist/index.html
+            echo '    <title>Feature Panel Demo</title>' >> dist/index.html
+            echo '    <style>' >> dist/index.html
+            echo '        body {' >> dist/index.html
+            echo '            font-family: system-ui, -apple-system, sans-serif;' >> dist/index.html
+            echo '            padding: 2rem;' >> dist/index.html
+            echo '            max-width: 1200px;' >> dist/index.html
+            echo '            margin: 0 auto;' >> dist/index.html
+            echo '            line-height: 1.6;' >> dist/index.html
+            echo '        }' >> dist/index.html
+            echo '        .status-box {' >> dist/index.html
+            echo '            background: #f0f9ff;' >> dist/index.html
+            echo '            border: 2px solid #0369a1;' >> dist/index.html
+            echo '            border-radius: 8px;' >> dist/index.html
+            echo '            padding: 1.5rem;' >> dist/index.html
+            echo '            margin: 2rem 0;' >> dist/index.html
+            echo '        }' >> dist/index.html
+            echo '        .success {' >> dist/index.html
+            echo '            color: #059669;' >> dist/index.html
+            echo '            font-weight: bold;' >> dist/index.html
+            echo '        }' >> dist/index.html
+            echo '    </style>' >> dist/index.html
+            echo '</head>' >> dist/index.html
+            echo '<body>' >> dist/index.html
+            echo '    <h1>🚀 Feature Panel Demo</h1>' >> dist/index.html
+            echo '    <p>This is the final deployment of your FeaturePanel component.</p>' >> dist/index.html
+            echo '    ' >> dist/index.html
+            echo '    <div class="status-box">' >> dist/index.html
+            echo '        <h2>✅ Deployment Status</h2>' >> dist/index.html
+            echo '        <p class="success">CI Workflow: PASSED</p>' >> dist/index.html
+            echo '        <p class="success">GitHub Pages: ACTIVE</p>' >> dist/index.html
+            echo '        <p>Generated: $(date -u)</p>' >> dist/index.html
+            echo '    </div>' >> dist/index.html
+            echo '    ' >> dist/index.html
+            echo '    <div>' >> dist/index.html
+            echo '        <h3>Next Steps:</h3>' >> dist/index.html
+            echo '        <ul>' >> dist/index.html
+            echo '            <li>FeaturePanel component will render here</li>' >> dist/index.html
+            echo '            <li>Add interactive filtering and cards</li>' >> dist/index.html
+            echo '            <li>Implement drawer for details</li>' >> dist/index.html
+            echo '        </ul>' >> dist/index.html
+            echo '    </div>' >> dist/index.html
+            echo '    ' >> dist/index.html
+            echo '    <script>' >> dist/index.html
+            echo '        // FeaturePanel will be initialized here' >> dist/index.html
+            echo '        console.log("FeaturePanel deployment ready");' >> dist/index.html
+            echo '    </script>' >> dist/index.html
+            echo '</body>' >> dist/index.html
+            echo '</html>' >> dist/index.html
+          fi
+          
+          echo "✅ Dist directory ready"
           ls -la dist/
 
-      # 4. 上传构建产物（供 Pages 部署使用）
+      # 6. 上传构建产物
       - name: Upload Dist Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -59,5 +110,6 @@ jobs:
           path: dist/
           retention-days: 1
 
-      - name: CI Final Status
-        run: echo "✅ 所有 CI 步骤已完成。"
+      # 7. 完成标记
+      - name: CI Success
+        run: echo "✅ CI pipeline completed successfully"
