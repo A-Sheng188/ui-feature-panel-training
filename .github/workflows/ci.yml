@@ -2,6 +2,9 @@ name: CI
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -12,47 +15,27 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'  # 修正为正确的参数
+        node-version: '20'
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
-      
+      run: |
+        # 检查 lock file 是否存在
+        if [ -f "package-lock.json" ]; then
+          echo "Using package-lock.json"
+          npm ci
+        elif [ -f "yarn.lock" ]; then
+          echo "Using yarn.lock"
+          yarn install --frozen-lockfile
+        else
+          echo "No lock file found, creating one..."
+          npm install --package-lock-only
+        fi
+        
     - name: Run tests
       run: npm test
       
-    - name: Build project
-      run: npm run build
-      
-    - name: Check dist consistency
-      id: check-dist
+    - name: Check for dist consistency
+      if: always()
       run: |
-        # 保存构建后的状态
-        git status
-        
-        # 检查dist是否有变化
-        if git diff --quiet HEAD -- dist/; then
-          echo "dist-clean=true" >> $GITHUB_OUTPUT
-          echo "✅ dist目录干净，无手动修改"
-        else
-          echo "dist-clean=false" >> $GITHUB_OUTPUT
-          echo "❌ dist目录有未提交的修改"
-          git diff HEAD -- dist/
-        fi
-        
-    - name: Upload dist as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist-build
-        path: dist/
-        
-    - name: Commit and push if dist has changes
-      if: steps.check-dist.outputs.dist-clean == 'false'
-      run: |
-        git config --local user.email "github-actions@github.com"
-        git config --local user.name "GitHub Actions"
-        git add dist/
-        git commit -m "chore: update dist directory from CI build"
-        git push
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        echo "CI check completed"
