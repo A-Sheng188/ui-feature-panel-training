@@ -1,53 +1,389 @@
-name: Generate dist
+const fs = require('fs');
+const path = require('path');
 
-on:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
+function generateDist() {
+  const rootDir = path.resolve(__dirname, '..');
+  const distDir = path.join(rootDir, 'dist');
+  
+  console.log('开始生成 dist 目录...');
+  console.log('根目录:', rootDir);
+  console.log('目标目录:', distDir);
+  
+  // 确保dist目录存在
+  if (!fs.existsSync(distDir)) {
+    console.log('创建 dist 目录...');
+    fs.mkdirSync(distDir, { recursive: true });
+  } else {
+    console.log('dist 目录已存在，清空内容...');
+    const files = fs.readdirSync(distDir);
+    for (const file of files) {
+      fs.unlinkSync(path.join(distDir, file));
+    }
+  }
+  
+  try {
+    // 读取演示数据
+    console.log('读取演示数据...');
+    const demoDataPath = path.join(rootDir, 'demo/demo.config.json');
+    console.log('演示数据路径:', demoDataPath);
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          
-      - name: Generate dist directory
-        run: node tools/gen_dist.js
-          
-      - name: Check for changes in dist
-        id: check-changes
-        run: |
-          if git diff --quiet --exit-code dist/; then
-            echo "No changes in dist directory"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "Changes detected in dist directory"
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            git diff --stat dist/
-          fi
-          
-      - name: Configure Git
-        if: steps.check-changes.outputs.has_changes == 'true'
-        run: |
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          
-      - name: Commit and push dist changes
-        if: steps.check-changes.outputs.has_changes == 'true'
-        run: |
-          git add dist/
-          git commit -m "Automated: Update dist from gen.yml workflow"
-          git push origin HEAD:main
-          
-      - name: No changes notification
-        if: steps.check-changes.outputs.has_changes == 'false'
-        run: |
-          echo "✅ No changes to dist directory. Everything is up to date."
+    if (!fs.existsSync(demoDataPath)) {
+      throw new Error(`找不到演示数据文件: ${demoDataPath}`);
+    }
+    
+    const demoContent = fs.readFileSync(demoDataPath, 'utf8');
+    const demoData = JSON.parse(demoContent);
+    
+    console.log(`成功读取 ${demoData.items.length} 个数据项`);
+    
+    // 生成完整的HTML内容
+    const htmlContent = generateHTML(demoData);
+    
+    // 写入文件
+    const indexPath = path.join(distDir, 'index.html');
+    fs.writeFileSync(indexPath, htmlContent, 'utf8');
+    
+    // 创建app.js和app.css文件（简化版）
+    fs.writeFileSync(path.join(distDir, 'app.js'), '// FeaturePanel JavaScript 文件\nconsole.log("FeaturePanel loaded");', 'utf8');
+    fs.writeFileSync(path.join(distDir, 'app.css'), '/* FeaturePanel CSS 文件 */\nbody { margin: 0; padding: 20px; font-family: sans-serif; }', 'utf8');
+    
+    console.log('✅ dist目录已生成！');
+    console.log('生成的文件:');
+    console.log('  - index.html');
+    console.log('  - app.js');
+    console.log('  - app.css');
+    
+  } catch (error) {
+    console.error('❌ 生成失败:', error.message);
+    console.error(error.stack);
+    throw error;
+  }
+}
+
+function generateHTML(demoData) {
+  const timestamp = new Date().toLocaleString('zh-CN');
+  
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FeaturePanel 功能面板演示</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .feature-panel {
+            margin: 20px 0;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .search-input, .status-select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border: 1px solid #eaeaea;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+        
+        .card-description {
+            color: #718096;
+            margin-bottom: 12px;
+        }
+        
+        .card-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status-disabled {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100%;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            padding: 30px;
+        }
+        
+        .drawer.open {
+            right: 0;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eaeaea;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 FeaturePanel 功能面板</h1>
+            <p>这是一个可复用的前端功能面板组件，支持筛选、搜索、详情查看等功能。</p>
+        </div>
+        
+        <div class="feature-panel">
+            <!-- 筛选区 -->
+            <div class="filters">
+                <input type="text" class="search-input" placeholder="请输入关键词搜索..." id="searchInput">
+                <select class="status-select" id="statusSelect">
+                    <option value="all">全部状态</option>
+                    <option value="active">活跃</option>
+                    <option value="disabled">禁用</option>
+                </select>
+            </div>
+            
+            <!-- 卡片列表区 -->
+            <div class="cards-container" id="cardsContainer">
+                <!-- 卡片将通过JavaScript动态生成 -->
+            </div>
+            
+            <!-- 状态显示 -->
+            <div id="loadingState" style="display: none; text-align: center; padding: 40px;">
+                <div style="font-size: 2rem;">⏳</div>
+                <div>数据加载中...</div>
+            </div>
+            
+            <div id="emptyState" style="display: none; text-align: center; padding: 40px;">
+                <div style="font-size: 2rem;">📭</div>
+                <div>暂无数据</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>GitHub Workflow Only 实现 | 最后生成时间: ${timestamp}</p>
+            <p>👆 点击卡片查看详情 | 🔍 使用搜索和筛选功能</p>
+        </div>
+    </div>
+    
+    <!-- Drawer 详情面板 -->
+    <div class="drawer" id="drawer">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eaeaea;">
+            <h2 style="margin: 0;">功能详情</h2>
+            <button onclick="closeDrawer()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+        </div>
+        <div id="drawerContent">
+            <!-- 详情内容将通过JavaScript动态生成 -->
+        </div>
+    </div>
+    
+    <script>
+        // 演示数据
+        const demoItems = ${JSON.stringify(demoData.items, null, 2)};
+        
+        // 当前状态
+        let currentQuery = '';
+        let currentFilter = 'all';
+        
+        // DOM元素
+        const cardsContainer = document.getElementById('cardsContainer');
+        const searchInput = document.getElementById('searchInput');
+        const statusSelect = document.getElementById('statusSelect');
+        const drawer = document.getElementById('drawer');
+        const drawerContent = document.getElementById('drawerContent');
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        
+        // 初始化
+        function init() {
+            // 显示加载状态
+            loadingState.style.display = 'block';
+            
+            // 模拟数据加载延迟
+            setTimeout(() => {
+                loadData();
+            }, 800);
+            
+            // 绑定事件
+            searchInput.addEventListener('input', function(e) {
+                currentQuery = e.target.value.toLowerCase();
+                renderCards();
+            });
+            
+            statusSelect.addEventListener('change', function(e) {
+                currentFilter = e.target.value;
+                renderCards();
+            });
+        }
+        
+        // 加载数据
+        function loadData() {
+            loadingState.style.display = 'none';
+            
+            if (demoItems && demoItems.length > 0) {
+                renderCards();
+            } else {
+                emptyState.style.display = 'block';
+            }
+        }
+        
+        // 渲染卡片
+        function renderCards() {
+            emptyState.style.display = 'none';
+            
+            let filteredItems = demoItems.filter(item => {
+                // 关键词筛选
+                const matchesQuery = !currentQuery || 
+                    item.title.toLowerCase().includes(currentQuery) ||
+                    (item.description && item.description.toLowerCase().includes(currentQuery));
+                
+                // 状态筛选
+                const matchesFilter = currentFilter === 'all' || item.status === currentFilter;
+                
+                return matchesQuery && matchesFilter;
+            });
+            
+            if (filteredItems.length === 0) {
+                emptyState.style.display = 'block';
+                cardsContainer.innerHTML = '';
+                return;
+            }
+            
+            cardsContainer.innerHTML = filteredItems.map(item => \`
+                <div class="card" onclick="openDrawer(\${item.id})">
+                    <div class="card-title">\${item.title}</div>
+                    \${item.description ? \`<div class="card-description">\${item.description}</div>\` : ''}
+                    <div class="card-status status-\${item.status}">
+                        \${item.status === 'active' ? '活跃' : '禁用'}
+                    </div>
+                </div>
+            \`).join('');
+        }
+        
+        // 打开Drawer
+        function openDrawer(itemId) {
+            const item = demoItems.find(i => i.id === itemId);
+            if (!item) return;
+            
+            // 更新Drawer内容
+            drawerContent.innerHTML = \`
+                <div style="margin-bottom: 15px;">
+                    <strong>标题:</strong> \${item.title}
+                </div>
+                \${item.description ? \`
+                <div style="margin-bottom: 15px;">
+                    <strong>描述:</strong> \${item.description}
+                </div>
+                \` : ''}
+                <div style="margin-bottom: 15px;">
+                    <strong>状态:</strong> \${item.status === 'active' ? '活跃' : '禁用'}
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>ID:</strong> \${item.id}
+                </div>
+            \`;
+            
+            // 显示Drawer
+            drawer.classList.add('open');
+        }
+        
+        // 关闭Drawer
+        function closeDrawer() {
+            drawer.classList.remove('open');
+        }
+        
+        // 点击外部关闭Drawer
+        document.addEventListener('click', function(event) {
+            if (drawer.classList.contains('open') && !drawer.contains(event.target)) {
+                closeDrawer();
+            }
+        });
+        
+        // 启动应用
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>`;
+}
+
+// 执行生成
+if (require.main === module) {
+  try {
+    generateDist();
+  } catch (error) {
+    console.error('生成过程失败:', error.message);
+    process.exit(1);
+  }
+}
