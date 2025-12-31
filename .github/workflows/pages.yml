@@ -1,45 +1,37 @@
 name: Deploy to GitHub Pages
 
 on:
-  # 触发方式：1. 推送到main分支的dist目录；2. 手动触发；3. 可选的：当CI成功时（如果希望保持联动）
-  push:
-    branches: [ main ]
-    paths:
-      - 'dist/**'
-  workflow_dispatch: # 允许手动运行
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types:
+      - completed
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Validate Dist Directory
-        run: |
-          if [ ! -d "dist" ] || [ ! -f "dist/index.html" ]; then
-            echo "❌ Error: 'dist' directory or 'index.html' not found."
-            echo "💡 Solution: Run the 'Generate Dist' workflow first."
-            exit 1
-          fi
-          echo "✅ Dist directory is valid."
-
       - name: Setup Pages
         uses: actions/configure-pages@v3
-
-      - name: Upload to Pages
+        
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          path: 'dist' # 直接使用仓库中的dist目录
-
+          # 指定 dist 文件夹作为部署源
+          path: 'dist/'
+          
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
