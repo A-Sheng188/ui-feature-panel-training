@@ -5,20 +5,21 @@ function verifyContract() {
   console.log('开始契约校验...');
   
   try {
-    // 检查目录结构
+    // 检查目录结构（dist目录除外，因为它由gen_dist.js生成）
     const requiredDirs = [
       '.github/workflows',
       'src/feature-panel',
       'demo',
-      'dist',
       'tools',
       'tests'
     ];
     
+    console.log('检查必需目录结构...');
     for (const dir of requiredDirs) {
       if (!fs.existsSync(dir)) {
         throw new Error(`缺少必需目录: ${dir}`);
       }
+      console.log(`✅ 目录存在: ${dir}`);
     }
     
     // 检查必需文件
@@ -32,10 +33,12 @@ function verifyContract() {
       'tests/feature-panel.spec.js'
     ];
     
+    console.log('检查必需文件...');
     for (const file of requiredFiles) {
       if (!fs.existsSync(file)) {
         throw new Error(`缺少必需文件: ${file}`);
       }
+      console.log(`✅ 文件存在: ${file}`);
     }
     
     console.log('✅ 目录和文件结构检查通过！');
@@ -71,6 +74,7 @@ function verifyContract() {
       if (!item.status || !['active', 'disabled'].includes(item.status)) {
         throw new Error(`items[${index}]的status必须是"active"或"disabled"，当前为：${item.status}`);
       }
+      console.log(`✅ 数据项 ${index + 1}: ${item.title} (${item.status})`);
     });
     
     console.log('✅ 所有数据项格式检查通过！');
