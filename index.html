@@ -1,23 +1,538 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feature Panel Demo</title>
-    <link rel="stylesheet" href="app.css">
+    <title>FeaturePanel 功能面板演示</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .placeholder { border: 2px dashed #ccc; padding: 40px; text-align: center; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        /* FeaturePanel 样式 */
+        .feature-panel {
+            display: grid;
+            gap: 30px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .search-input, .status-select {
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            flex: 1;
+        }
+        
+        .status-select {
+            max-width: 200px;
+        }
+        
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+        
+        .card {
+            background: white;
+            border: 1px solid #eaeaea;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 8px 0 0 8px;
+        }
+        
+        .card.active {
+            border-left-color: #48bb78;
+        }
+        
+        .card.active::before {
+            background: #48bb78;
+        }
+        
+        .card.disabled {
+            opacity: 0.7;
+            border-left-color: #a0aec0;
+        }
+        
+        .card.disabled::before {
+            background: #a0aec0;
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+        
+        .card-description {
+            color: #718096;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+        
+        .card-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status-disabled {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        /* 四种状态样式 */
+        .state-loading, .state-error, .state-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            text-align: center;
+        }
+        
+        .state-loading {
+            color: #667eea;
+        }
+        
+        .state-error {
+            color: #f56565;
+        }
+        
+        .state-empty {
+            color: #a0aec0;
+        }
+        
+        /* Drawer 样式 */
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100%;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            padding: 30px;
+            overflow-y: auto;
+        }
+        
+        .drawer.open {
+            right: 0;
+        }
+        
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 999;
+        }
+        
+        .drawer-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .drawer-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .drawer-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #718096;
+            padding: 5px;
+        }
+        
+        .drawer-close:hover {
+            color: #2d3748;
+        }
+        
+        .drawer-content {
+            line-height: 1.6;
+        }
+        
+        .drawer-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f7fafc;
+        }
+        
+        .drawer-item:last-child {
+            border-bottom: none;
+        }
+        
+        .drawer-label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-right: 8px;
+        }
+        
+        .drawer-value {
+            color: #2d3748;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eaeaea;
+            color: #718096;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
-    <h1>Feature Panel Demo</h1>
-    <div class="placeholder">
-        <h2>🚧 Feature Panel Coming Soon</h2>
-        <p>This is a placeholder. Feature Panel will be generated here.</p>
-        <p>Commit SHA: <code id="commit-sha">main</code></p>
+    <div class="container">
+        <div class="header">
+            <h1>FeaturePanel 功能面板</h1>
+            <p>这是一个可复用的前端功能面板组件，支持筛选、搜索、详情查看等功能。</p>
+        </div>
+        
+        <div class="feature-panel">
+            <!-- 筛选区 -->
+            <div class="filters">
+                <input type="text" class="search-input" placeholder="请输入关键词搜索..." id="searchInput">
+                <select class="status-select" id="statusSelect">
+                    <option value="all">全部状态</option>
+                    <option value="active">活跃</option>
+                    <option value="disabled">禁用</option>
+                </select>
+            </div>
+            
+            <!-- 卡片列表区 -->
+            <div class="cards-container" id="cardsContainer">
+                <!-- 卡片将通过JavaScript动态生成 -->
+            </div>
+            
+            <!-- 状态显示区 -->
+            <div class="state-loading" id="loadingState" style="display: none;">
+                <div style="font-size: 2rem; margin-bottom: 15px;">⏳</div>
+                <div style="font-size: 1.2rem;">数据加载中...</div>
+            </div>
+            
+            <div class="state-error" id="errorState" style="display: none;">
+                <div style="font-size: 2rem; margin-bottom: 15px;">❌</div>
+                <div style="font-size: 1.2rem;">加载失败，请稍后重试</div>
+                <button onclick="loadData()" style="margin-top: 15px; padding: 8px 16px; background: #f56565; color: white; border: none; border-radius: 4px; cursor: pointer;">重试</button>
+            </div>
+            
+            <div class="state-empty" id="emptyState" style="display: none;">
+                <div style="font-size: 2rem; margin-bottom: 15px;">📭</div>
+                <div style="font-size: 1.2rem;">暂无数据</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>GitHub Workflow Only 实现 | 最后生成时间: 2025/12/31 02:18:22</p>
+        </div>
     </div>
-    <script src="app.js"></script>
+    
+    <!-- Drawer 详情面板 -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-header">
+            <div class="drawer-title">功能详情</div>
+            <button class="drawer-close" onclick="closeDrawer()">×</button>
+        </div>
+        <div class="drawer-content" id="drawerContent">
+            <!-- 详情内容将通过JavaScript动态生成 -->
+        </div>
+    </div>
+    
+    <script>
+        // 演示数据
+        const demoItems = [
+  {
+    "id": 1,
+    "title": "用户管理",
+    "description": "管理系统的用户信息，包括添加、删除、修改用户",
+    "status": "active"
+  },
+  {
+    "id": 2,
+    "title": "权限控制",
+    "description": "控制用户访问权限，支持角色和权限分配",
+    "status": "active"
+  },
+  {
+    "id": 3,
+    "title": "数据分析",
+    "description": "提供数据统计和分析功能，支持图表展示",
+    "status": "active"
+  },
+  {
+    "id": 4,
+    "title": "日志记录",
+    "description": "记录系统操作日志，支持日志查询和导出",
+    "status": "disabled"
+  }
+];
+        
+        // 当前状态
+        let currentState = 'loading'; // loading, error, empty, normal
+        let currentQuery = '';
+        let currentFilter = 'all';
+        let currentSelectedItem = null;
+        
+        // DOM元素
+        const cardsContainer = document.getElementById('cardsContainer');
+        const searchInput = document.getElementById('searchInput');
+        const statusSelect = document.getElementById('statusSelect');
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const emptyState = document.getElementById('emptyState');
+        const drawer = document.getElementById('drawer');
+        const drawerOverlay = document.getElementById('drawerOverlay');
+        const drawerContent = document.getElementById('drawerContent');
+        
+        // 初始化
+        function init() {
+            // 模拟数据加载
+            setTimeout(() => {
+                loadData();
+            }, 1000);
+            
+            // 绑定事件
+            searchInput.addEventListener('input', function(e) {
+                currentQuery = e.target.value.toLowerCase();
+                renderCards();
+            });
+            
+            statusSelect.addEventListener('change', function(e) {
+                currentFilter = e.target.value;
+                renderCards();
+            });
+            
+            drawerOverlay.addEventListener('click', closeDrawer);
+        }
+        
+        // 加载数据
+        function loadData() {
+            setState('loading');
+            
+            setTimeout(() => {
+                if (demoItems && demoItems.length > 0) {
+                    setState('normal');
+                    renderCards();
+                } else {
+                    setState('empty');
+                }
+            }, 800);
+        }
+        
+        // 设置状态
+        function setState(state) {
+            currentState = state;
+            
+            // 隐藏所有状态
+            loadingState.style.display = 'none';
+            errorState.style.display = 'none';
+            emptyState.style.display = 'none';
+            cardsContainer.style.display = 'none';
+            
+            // 显示当前状态
+            switch(state) {
+                case 'loading':
+                    loadingState.style.display = 'flex';
+                    break;
+                case 'error':
+                    errorState.style.display = 'flex';
+                    break;
+                case 'empty':
+                    emptyState.style.display = 'flex';
+                    break;
+                case 'normal':
+                    cardsContainer.style.display = 'grid';
+                    break;
+            }
+        }
+        
+        // 渲染卡片
+        function renderCards() {
+            if (currentState !== 'normal') return;
+            
+            let filteredItems = demoItems.filter(item => {
+                // 关键词筛选
+                const matchesQuery = !currentQuery || 
+                    item.title.toLowerCase().includes(currentQuery) ||
+                    (item.description && item.description.toLowerCase().includes(currentQuery));
+                
+                // 状态筛选
+                const matchesFilter = currentFilter === 'all' || item.status === currentFilter;
+                
+                return matchesQuery && matchesFilter;
+            });
+            
+            if (filteredItems.length === 0) {
+                setState('empty');
+                return;
+            }
+            
+            cardsContainer.innerHTML = filteredItems.map(item => `
+                <div class="card ${item.status}" onclick="openDrawer(${item.id})">
+                    <div class="card-title">${item.title}</div>
+                    ${item.description ? `<div class="card-description">${item.description}</div>` : ''}
+                    <div class="card-status status-${item.status}">
+                        ${item.status === 'active' ? '活跃' : '禁用'}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 打开Drawer
+        function openDrawer(itemId) {
+            const item = demoItems.find(i => i.id === itemId);
+            if (!item) return;
+            
+            currentSelectedItem = item;
+            
+            // 更新Drawer内容
+            drawerContent.innerHTML = `
+                <div class="drawer-item">
+                    <span class="drawer-label">标题:</span>
+                    <span class="drawer-value">${item.title}</span>
+                </div>
+                ${item.description ? `
+                <div class="drawer-item">
+                    <span class="drawer-label">描述:</span>
+                    <span class="drawer-value">${item.description}</span>
+                </div>
+                ` : ''}
+                <div class="drawer-item">
+                    <span class="drawer-label">状态:</span>
+                    <span class="drawer-value">${item.status === 'active' ? '活跃' : '禁用'}</span>
+                </div>
+                <div class="drawer-item">
+                    <span class="drawer-label">ID:</span>
+                    <span class="drawer-value">${item.id}</span>
+                </div>
+            `;
+            
+            // 显示Drawer
+            drawer.classList.add('open');
+            drawerOverlay.classList.add('show');
+            
+            // 触发回调（模拟）
+            if (window.onSelect) {
+                window.onSelect(item);
+            }
+        }
+        
+        // 关闭Drawer
+        function closeDrawer() {
+            drawer.classList.remove('open');
+            drawerOverlay.classList.remove('show');
+            currentSelectedItem = null;
+        }
+        
+        // 启动应用
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // 暴露给全局（用于测试）
+        window.FeaturePanel = {
+            loadData,
+            setState,
+            openDrawer,
+            closeDrawer
+        };
+    </script>
 </body>
 </html>
+  
