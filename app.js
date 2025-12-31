@@ -1,0 +1,1 @@
+console.log('FeaturePanel JavaScript 已加载');
