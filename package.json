@@ -1,0 +1,21 @@
+{
+  "name": "ui-feature-panel-training",
+  "version": "1.0.0",
+  "description": "UI Feature Panel Training Application",
+  "main": "index.js",
+  "scripts": {
+    "build": "mkdir -p dist && cp *.html dist/ 2>/dev/null || true && cp *.css dist/ 2>/dev/null || true && cp *.js dist/ 2>/dev/null || true",
+    "test": "echo \"No tests specified\" && exit 0",
+    "clean": "rm -rf dist/",
+    "prebuild": "npm run clean"
+  },
+  "keywords": [
+    "ui",
+    "training",
+    "feature-panel"
+  ],
+  "author": "A-Sheng188",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {}
+}
