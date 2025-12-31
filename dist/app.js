@@ -1,1 +1,1 @@
-// Feature Panel JavaScript
+// FeaturePanel JavaScript 文件
