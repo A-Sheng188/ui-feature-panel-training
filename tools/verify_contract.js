@@ -38,27 +38,48 @@ function verifyContract() {
       }
     }
     
+    console.log('✅ 目录和文件结构检查通过！');
+    
     // 检查demo数据格式
-    const demoData = JSON.parse(fs.readFileSync('demo/demo.config.json', 'utf8'));
+    const demoContent = fs.readFileSync('demo/demo.config.json', 'utf8');
+    console.log('读取demo.config.json文件内容...');
+    
+    // 清理可能的BOM头
+    const cleanedContent = demoContent.replace(/^\uFEFF/, '');
+    
+    // 检查JSON格式
+    let demoData;
+    try {
+      demoData = JSON.parse(cleanedContent);
+    } catch (jsonError) {
+      console.error('JSON解析错误详情：', jsonError.message);
+      console.error('错误位置：', jsonError.position);
+      console.error('错误附近内容：', cleanedContent.substring(Math.max(0, jsonError.position - 20), Math.min(cleanedContent.length, jsonError.position + 20)));
+      throw new Error(`JSON解析失败: ${jsonError.message}`);
+    }
     
     if (!demoData.items || !Array.isArray(demoData.items)) {
       throw new Error('demo.config.json必须包含items数组');
     }
+    
+    console.log(`✅ 找到 ${demoData.items.length} 个数据项`);
     
     // 检查每个item的格式
     demoData.items.forEach((item, index) => {
       if (!item.id) throw new Error(`items[${index}]缺少id字段`);
       if (!item.title) throw new Error(`items[${index}]缺少title字段`);
       if (!item.status || !['active', 'disabled'].includes(item.status)) {
-        throw new Error(`items[${index}]的status必须是active或disabled`);
+        throw new Error(`items[${index}]的status必须是"active"或"disabled"，当前为：${item.status}`);
       }
     });
     
+    console.log('✅ 所有数据项格式检查通过！');
     console.log('✅ 契约校验通过！');
     return true;
     
   } catch (error) {
     console.error('❌ 契约校验失败:', error.message);
+    console.error('请检查相关文件格式是否正确。');
     return false;
   }
 }
