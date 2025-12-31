@@ -1,0 +1,53 @@
+name: Generate dist
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # 获取所有历史记录，用于git diff
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          
+      - name: Generate dist directory
+        run: node tools/gen_dist.js
+          
+      - name: Check for changes in dist
+        id: check-changes
+        run: |
+          if git diff --quiet --exit-code dist/; then
+            echo "No changes in dist directory"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected in dist directory"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            git diff --stat dist/
+          fi
+          
+      - name: Configure Git
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          
+      - name: Commit and push dist changes
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git add dist/
+          git commit -m "Automated: Update dist from gen.yml workflow"
+          git push origin HEAD:main
+          
+      - name: No changes notification
+        if: steps.check-changes.outputs.has_changes == 'false'
+        run: |
+          echo "✅ No changes to dist directory. Everything is up to date."
